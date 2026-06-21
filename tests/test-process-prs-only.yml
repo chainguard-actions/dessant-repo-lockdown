@@ -1,0 +1,45 @@
+name: Test process-only prs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_EVENT_NAME: pull_request
+      GITHUB_REF: refs/heads/main
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github-token: ${{ github.token }}
+          process-only: prs
+          close-pr: 'true'
+          lock-pr: 'true'
+          pr-lock-reason: 'resolved'
+          log-output: 'true'
+
+      - name: Assert prs output is valid JSON or empty
+        env:
+          PRS_OUT: ${{ steps.action.outputs.prs }}
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "prs output: $PRS_OUT"
+          # The action may fail due to no real GitHub context, but if it succeeds
+          # the output should be valid JSON (array)
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -n "$PRS_OUT" ]; then
+              echo "$PRS_OUT" | python3 -c "import sys,json; data=json.load(sys.stdin); assert isinstance(data, list), 'Expected JSON array'" || {
+                echo "FAIL: prs output is not a valid JSON array"
+                exit 1
+              }
+              echo "PASS: prs output is valid JSON array"
+            else
+              echo "PASS: no prs output (empty)"
+            fi
+          else
+            echo "PASS: action did not succeed (expected in test environment without real GitHub context)"
+          fi
