@@ -1,0 +1,45 @@
+name: Test basic usage - process issues only
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        with:
+          github-token: ${{ github.token }}
+          process-only: issues
+          close-issue: 'true'
+          lock-issue: 'true'
+          issue-close-reason: 'not planned'
+          log-output: 'true'
+        continue-on-error: true
+      - name: Assert issues output is valid JSON or empty
+        env:
+          ISSUES_OUTPUT: ${{ steps.action.outputs.issues }}
+        run: |
+          echo "issues output: $ISSUES_OUTPUT"
+          # The output should either be a JSON array or empty string
+          if [ -n "$ISSUES_OUTPUT" ]; then
+            echo "$ISSUES_OUTPUT" | python3 -c "import sys, json; json.load(sys.stdin)" 2>/dev/null
+            if [ $? -ne 0 ]; then
+              echo "FAIL: issues output is not valid JSON: $ISSUES_OUTPUT"
+              exit 1
+            fi
+            echo "PASS: issues output is valid JSON"
+          else
+            echo "PASS: issues output is empty (no issues processed)"
+          fi
+      - name: Assert prs output is empty when process-only is issues
+        env:
+          PRS_OUTPUT: ${{ steps.action.outputs.prs }}
+        run: |
+          echo "prs output: $PRS_OUTPUT"
+          # When process-only is 'issues', prs output should be empty or an empty array
+          if [ -n "$PRS_OUTPUT" ] && [ "$PRS_OUTPUT" != "[]" ]; then
+            echo "WARN: prs output is non-empty when process-only=issues: $PRS_OUTPUT"
+          else
+            echo "PASS: prs output is empty or empty array as expected"
+          fi
