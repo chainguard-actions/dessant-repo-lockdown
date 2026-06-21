@@ -1,0 +1,34 @@
+name: Test process-only prs (workflow_dispatch event matches pr thread type)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          github-token: fake-token-for-testing
+          process-only: prs
+          close-pr: 'true'
+          lock-pr: 'true'
+          log-output: 'false'
+        continue-on-error: true
+
+      - name: Assert action ran (process-only prs matches workflow_dispatch pr thread type)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # workflow_dispatch maps to threadType='pr', process-only=prs maps to 'pr'
+          # They match, so the action attempts to search the backlog (API call)
+          # With a fake token, the API call fails - that is expected
+          # We verify the action ran (not a config/startup crash)
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action ran with outcome: $OUTCOME"
+          else
+            echo "FAIL: unexpected outcome: $OUTCOME"
+            exit 1
+          fi

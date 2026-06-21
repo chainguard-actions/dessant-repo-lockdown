@@ -1,0 +1,32 @@
+name: Test process-only skip (workflow_dispatch event, process-only issues)
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          github-token: fake-token-for-testing
+          process-only: issues
+          log-output: 'false'
+
+      - name: Assert action succeeded (skipped due to process-only mismatch)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          ISSUES_OUTPUT: ${{ steps.action.outputs.issues }}
+          PRS_OUTPUT: ${{ steps.action.outputs.prs }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "issues output: '$ISSUES_OUTPUT'"
+          echo "prs output: '$PRS_OUTPUT'"
+          # workflow_dispatch maps to threadType='pr', but process-only=issues maps to 'issue'
+          # Since 'pr' != 'issue', the action returns early without making API calls
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected action to succeed (skip) but got: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly skipped processing"
