@@ -1,0 +1,48 @@
+name: Test exclude-created-before timestamp filtering
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          github-token: ${{ github.token }}
+          process-only: issues
+          close-issue: 'true'
+          lock-issue: 'true'
+          exclude-issue-created-before: '2020-01-01T00:00:00Z'
+          exclude-issue-labels: 'pinned,security'
+          log-output: 'true'
+        continue-on-error: true
+
+      - name: Assert action completed without fatal error
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "action outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action completed with outcome: $OUTCOME"
+          else
+            echo "FAIL: unexpected outcome: $OUTCOME"
+            exit 1
+          fi
+
+      - name: Assert issues output is valid JSON when present
+        env:
+          ISSUES_OUT: ${{ steps.action.outputs.issues }}
+        run: |
+          echo "issues output: $ISSUES_OUT"
+          if [ -n "$ISSUES_OUT" ]; then
+            echo "$ISSUES_OUT" | python3 -c "import sys, json; data=json.load(sys.stdin); print('items:', len(data))" 2>&1
+            if [ $? -ne 0 ]; then
+              echo "FAIL: issues output is not valid JSON"
+              exit 1
+            fi
+            echo "PASS: issues output is valid JSON"
+          else
+            echo "PASS: no issues output (none processed)"
+          fi

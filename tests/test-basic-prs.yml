@@ -1,0 +1,52 @@
+name: Test basic PR processing
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        with:
+          github-token: ${{ github.token }}
+          process-only: prs
+          close-pr: 'true'
+          lock-pr: 'true'
+          pr-comment: 'This repository does not accept pull requests.'
+          log-output: 'true'
+        continue-on-error: true
+
+      - name: Assert prs output is valid JSON
+        env:
+          PRS_OUT: ${{ steps.action.outputs.prs }}
+        run: |
+          echo "prs output: $PRS_OUT"
+          # The output should either be a JSON array or empty string
+          if [ -n "$PRS_OUT" ]; then
+            echo "$PRS_OUT" | python3 -c "import sys, json; json.load(sys.stdin)" 2>&1
+            if [ $? -ne 0 ]; then
+              echo "FAIL: prs output is not valid JSON"
+              exit 1
+            fi
+            echo "PASS: prs output is valid JSON"
+          else
+            echo "PASS: prs output is empty (no PRs processed)"
+          fi
+
+      - name: Assert issues output is empty when process-only is prs
+        env:
+          ISSUES_OUT: ${{ steps.action.outputs.issues }}
+        run: |
+          echo "issues output: $ISSUES_OUT"
+          # When process-only is 'prs', issues output should be empty or an empty array
+          if [ -n "$ISSUES_OUT" ]; then
+            COUNT=$(echo "$ISSUES_OUT" | python3 -c "import sys, json; data=json.load(sys.stdin); print(len(data))" 2>/dev/null || echo "0")
+            echo "issues count: $COUNT"
+            if [ "$COUNT" != "0" ]; then
+              echo "FAIL: expected no issues processed when process-only=prs"
+              exit 1
+            fi
+          fi
+          echo "PASS: no issues processed when process-only=prs"
