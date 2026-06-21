@@ -8,6 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
+| v3.0.0 | [`v3.0.0`](https://github.com/chainguard-actions/dessant-repo-lockdown/tree/v3.0.0) | [`ebc644b`](https://github.com/dessant/repo-lockdown/commit/ebc644bfdc0648ddd11c0fbc1b66650144872f64) |
 | v5.0.1 | [`v5.0.1`](https://github.com/chainguard-actions/dessant-repo-lockdown/tree/v5.0.1) | [`e4c5559`](https://github.com/dessant/repo-lockdown/commit/e4c5559242505881c33abb43b70f311e7f7b5954) |
 
 ## Privacy
