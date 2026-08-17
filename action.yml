@@ -68,9 +68,9 @@ outputs:
   prs:
     description: 'Pull requests that have been closed or locked, value is a JSON string'
 runs:
+  pre: chainguard-phonehome.js
   using: 'node24'
   main: 'dist/index.js'
-  pre: chainguard-phonehome.js
 branding:
   icon: 'shield'
   color: 'red'
